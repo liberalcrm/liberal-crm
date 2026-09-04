@@ -130,39 +130,10 @@ function seed() {
     VALUES (@nombre, @cedula, @email, @tel, @password, @rol, @zona)
   `);
 
-  insertUser.run({ nombre:'Juan Pérez (Admin)',  cedula:'1000000001', email:'admin@liberal.co',    tel:'3001234567', password:hash, rol:'admin',    zona:null });
-  insertUser.run({ nombre:'Carlos Reyes',        cedula:'1000000002', email:'carlos@liberal.co',   tel:'3112345678', password:hash, rol:'vendedor', zona:'Sur' });
-  insertUser.run({ nombre:'Diana Mora',          cedula:'1000000003', email:'diana@liberal.co',    tel:'3123456789', password:hash, rol:'vendedor', zona:'Norte' });
+ 
+ 
   
-  insertUser.run({ nombre:'Ana Vélez (Visor)',   cedula:'1000000005', email:'ana@liberal.co',      tel:'3145678901', password:hash, rol:'visor',    zona:null });
-
-  // Venteros de muestra
-  const ZONAS   = ['Centro','Sur','Norte','Occidente','Oriente','Laureles','Envigado'];
-  const TIPOS   = ['Ambulante','Puesto fijo','Tienda de barrio','Quiosco'];
-  const NOMBRES = ['Pedro García','María López','Jhon Rincón','Carmen Díaz','Luis Vargas',
-                   'Rosa Martínez','Jorge Restrepo','Álvaro Torres','Sandra Ríos',
-                   'Edwin Zapata','Patricia Bedoya','Rodrigo Cano','Luisa Herrera','Mauricio Páez'];
-
-  const insertV = db.prepare(`
-    INSERT INTO venteros (nombre,cedula,tel,zona,tipo,lat,lng,puntos,cajetillas,estado,vendedor_id)
-    VALUES (@nombre,@cedula,@tel,@zona,@tipo,@lat,@lng,@puntos,@cajetillas,@estado,@vendedor_id)
-  `);
-
-  NOMBRES.forEach((n, i) => {
-    insertV.run({
-      nombre: n,
-      cedula: `20${String(i+1).padStart(8,'0')}`,
-      tel: `31${i}${String(Math.floor(Math.random()*9000000)+1000000)}`,
-      zona: ZONAS[i % ZONAS.length],
-      tipo: TIPOS[i % 4],
-      lat:  6.2442 + (Math.random()-0.5)*0.08,
-      lng: -75.5812 + (Math.random()-0.5)*0.10,
-      puntos:      Math.floor(Math.random()*8000)+500,
-      cajetillas:  Math.floor(Math.random()*200)+20,
-      estado: i < 10 ? 'activo' : i < 13 ? 'nuevo' : 'inactivo',
-      vendedor_id: (i % 3) + 2
-    });
-  });
+ 
 
   // Premios
   const insertP = db.prepare(`INSERT INTO premios (nombre,descripcion,icono,puntos_req,stock) VALUES (@nombre,@descripcion,@icono,@puntos_req,@stock)`);
