@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LIBERAL CRM — Red de Venteros</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--rojo:#C8102E;--rojo-dark:#8B0C1F;--rojo-light:#FF3A55;--oro:#D4AF37;--negro:#0D0D0D;--g1:#1A1A1A;--g2:#242424;--g3:#303030;--g4:#444;--g5:#888;--g6:#BBB;--blanco:#F5F5F0;--verde:#1DB954;--azul:#3B82F6;--r:10px;--rl:16px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',sans-serif;background:var(--negro);color:var(--blanco);overflow:hidden}
+/* LAYOUT */
+.app{display:grid;grid-template-columns:240px 1fr;grid-template-rows:54px 1fr;height:100vh}
+/* LOGIN */
+.login-screen{position:fixed;inset:0;background:var(--negro);z-index:9999;display:flex;align-items:center;justify-content:center}
+.login-card{background:var(--g1);border:1px solid var(--g3);border-radius:var(--rl);padding:40px;width:360px}
+.login-logo{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:8px;color:var(--rojo);text-align:center;margin-bottom:4px}
+.login-sub{text-align:center;font-size:11px;color:var(--g5);letter-spacing:3px;text-transform:uppercase;margin-bottom:32px}
+.login-err{background:rgba(200,16,46,.1);border:1px solid rgba(200,16,46,.3);border-radius:8px;padding:10px;font-size:13px;color:var(--rojo-light);margin-bottom:14px;display:none}
+/* TOPBAR */
+.topbar{grid-column:1/-1;background:var(--g1);border-bottom:1px solid var(--g3);display:flex;align-items:center;gap:14px;padding:0 18px}
+.brand{display:flex;align-items:center;gap:8px}
+.brand-logo{width:30px;height:30px;background:var(--rojo);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:17px}
+.brand-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px}
+.brand-sub{font-size:9px;color:var(--g5);letter-spacing:2px;text-transform:uppercase;margin-top:-2px}
+.topbar-stats{flex:1;display:flex;justify-content:center;gap:6px}
+.tstat{text-align:center;background:var(--g2);border-radius:6px;padding:4px 12px}
+.tstat-v{font-size:14px;font-weight:600;color:var(--oro)}
+.tstat-l{font-size:9px;color:var(--g5);text-transform:uppercase;letter-spacing:.05em}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.user-chip{display:flex;align-items:center;gap:6px;background:var(--g2);border-radius:20px;padding:4px 10px 4px 4px;cursor:pointer}
+.uavatar{width:22px;height:22px;border-radius:50%;background:var(--rojo);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+.uname{font-size:12px;color:var(--g6)}
+/* SIDEBAR */
+.sidebar{background:var(--g1);border-right:1px solid var(--g3);display:flex;flex-direction:column;overflow-y:auto}
+.nav-sec{padding:14px 10px 6px}
+.nav-lbl{font-size:9px;color:var(--g5);text-transform:uppercase;letter-spacing:2px;padding:0 8px;margin-bottom:5px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--g6);transition:all .15s;margin-bottom:1px;user-select:none}
+.nav-item:hover{background:var(--g2);color:var(--blanco)}
+.nav-item.active{background:rgba(200,16,46,.15);color:var(--rojo-light)}
+.nav-item svg{width:14px;height:14px;flex-shrink:0}
+.nbadge{margin-left:auto;font-size:9px;background:var(--rojo);color:#fff;border-radius:10px;padding:1px 5px;font-weight:700}
+.sidebar-foot{margin-top:auto;padding:10px;border-top:1px solid var(--g3)}
+.sync-dot{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--g5)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--verde);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* MAIN */
+.main{overflow:hidden;display:flex;flex-direction:column;position:relative}
+.panel{display:none;height:100%;overflow-y:auto;padding:18px}
+.panel.active{display:block}
+.panel-map{display:none;height:100%;padding:0;position:relative}
+.panel-map.active{display:flex;flex-direction:column}
+/* KPIs */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.kpi{background:var(--g2);border-radius:var(--r);padding:14px;border:1px solid var(--g3);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.r::before{background:var(--rojo)}.kpi.g::before{background:var(--oro)}.kpi.v::before{background:var(--verde)}.kpi.b::before{background:var(--azul)}
+.kpi-lbl{font-size:10px;color:var(--g5);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.kpi-val{font-size:26px;font-weight:600;line-height:1}
+.kpi-d{font-size:10px;margin-top:3px}.up{color:var(--verde)}.dn{color:var(--rojo-light)}
+/* CARDS */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.card{background:var(--g2);border-radius:var(--rl);padding:14px;border:1px solid var(--g3)}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sec-ttl{font-size:11px;font-weight:600;color:var(--g6);text-transform:uppercase;letter-spacing:.06em}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:7px 9px;font-size:9px;color:var(--g5);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--g3)}
+td{padding:8px 9px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--g6)}
+tr:hover td{background:rgba(255,255,255,.02);color:var(--blanco)}
+.pill{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600}
+.p-a{background:rgba(29,185,84,.15);color:var(--verde)}.p-n{background:rgba(212,175,55,.15);color:var(--oro)}.p-i{background:rgba(136,136,136,.15);color:var(--g5)}
+.rank-item{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.rank-item:last-child{border-bottom:none}
+.rnum{font-size:10px;color:var(--g5);width:14px;text-align:right}
+.rbar-w{height:5px;background:var(--g3);border-radius:3px;overflow:hidden;margin-top:3px}
+.rbar{height:100%;border-radius:3px}
+/* BOTONES */
+.btn{padding:6px 13px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-family:'Inter',sans-serif;font-weight:500;transition:all .15s}
+.btn-p{background:var(--rojo);color:#fff}.btn-p:hover{background:var(--rojo-light)}
+.btn-o{background:transparent;border:1px solid var(--g3);color:var(--g6)}.btn-o:hover{border-color:var(--g4);color:var(--blanco)}
+.btn-g{background:var(--g3);color:var(--g6)}.btn-g:hover{background:var(--g4);color:var(--blanco)}
+/* FORMULARIOS */
+.fg{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.fg label{font-size:10px;color:var(--g5);text-transform:uppercase;letter-spacing:.06em}
+.fg input,.fg select,.fg textarea{background:var(--g2);border:1px solid var(--g3);border-radius:7px;color:var(--blanco);font-size:12px;padding:8px 11px;font-family:'Inter',sans-serif;outline:none;transition:border-color .15s;width:100%}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--rojo)}
+.fg select option{background:var(--g2)}.fg textarea{resize:vertical;min-height:60px}
+.fg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg-full{grid-column:1/-1}
+/* MAPA */
+#map{flex:1}
+.map-ctrl{position:absolute;top:14px;right:14px;z-index:1000;display:flex;flex-direction:column;gap:7px}
+.map-btn{background:var(--g1);border:1px solid var(--g3);border-radius:7px;padding:7px 11px;font-size:11px;color:var(--g6);cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif}
+.map-btn:hover{background:var(--g2);color:var(--blanco)}
+.map-search{position:absolute;top:14px;left:14px;z-index:1000;background:var(--g1);border:1px solid var(--g3);border-radius:7px;width:240px}
+.map-search input{width:100%;background:transparent;border:none;outline:none;color:var(--blanco);font-size:12px;padding:9px 12px;font-family:'Inter',sans-serif}
+.map-search input::placeholder{color:var(--g5)}
+.map-legend{position:absolute;bottom:14px;left:14px;z-index:1000;background:var(--g1);border:1px solid var(--g3);border-radius:9px;padding:10px 13px;font-size:11px}
+.leg-item{display:flex;align-items:center;gap:7px;margin-bottom:5px;color:var(--g6)}
+.leg-item:last-child{margin-bottom:0}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.leaflet-container{background:#1a1a2e}
+.leaflet-popup-content-wrapper{background:var(--g1)!important;border:1px solid var(--g3)!important;border-radius:10px!important;color:var(--blanco)!important}
+.leaflet-popup-tip{background:var(--g1)!important}
+.leaflet-popup-content{margin:11px 13px!important;font-family:'Inter',sans-serif!important;font-size:12px}
+.leaflet-popup-close-button{color:var(--g5)!important}
+.p-name{font-size:13px;font-weight:600;margin-bottom:3px}
+.p-meta{font-size:11px;color:var(--g5);margin-bottom:7px}
+.p-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--g3)}
+.p-row:last-child{border-bottom:none}
+.p-row span:last-child{color:var(--oro);font-weight:500}
+/* PREMIOS */
+.premios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.premio-card{background:var(--g2);border:1px solid var(--g3);border-radius:var(--rl);padding:18px;text-align:center;transition:border-color .2s}
+.premio-card:hover{border-color:var(--oro)}
+.p-icon{font-size:28px;margin-bottom:8px}
+.p-name2{font-size:13px;font-weight:600;margin-bottom:3px}
+.p-pts{font-size:11px;color:var(--oro);margin-bottom:4px}
+.p-stk{font-size:10px;color:var(--g5);margin-bottom:10px}
+.p-desc{font-size:11px;color:var(--g5);margin-bottom:12px}
+.btn-canje{background:var(--g3);color:var(--g6);border:none;border-radius:6px;padding:7px 12px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:500;width:100%}
+.btn-canje:hover{background:var(--rojo);color:#fff}
+/* VENDEDORES */
+.vcard{background:var(--g2);border:1px solid var(--g3);border-radius:var(--rl);padding:12px;display:flex;gap:11px;margin-bottom:10px}
+.vavatar{width:38px;height:38px;border-radius:50%;background:var(--rojo-dark);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+/* MODAL */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:5000;display:none;align-items:center;justify-content:center}
+.modal-ov.open{display:flex}
+.modal{background:var(--g1);border:1px solid var(--g3);border-radius:var(--rl);padding:22px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.modal-ttl{font-size:15px;font-weight:600}
+.modal-close{background:none;border:none;color:var(--g5);cursor:pointer;font-size:18px;line-height:1}
+.modal-close:hover{color:var(--blanco)}
+/* QR modal */
+.qr-img{display:block;margin:0 auto 12px;border-radius:8px;border:4px solid #fff}
+/* TOAST */
+.toast{position:fixed;bottom:18px;right:18px;z-index:9999;background:var(--g1);border:1px solid var(--g3);border-radius:9px;padding:11px 15px;font-size:12px;color:var(--blanco);display:flex;align-items:center;gap:8px;box-shadow:0 8px 32px rgba(0,0,0,.5);transform:translateY(70px);opacity:0;transition:all .3s ease;max-width:300px}
+.toast.show{transform:translateY(0);opacity:1}
+/* SPINNER */
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* MSG INFO BOX */
+.info-box{background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2);border-radius:8px;padding:10px 13px;font-size:12px;color:var(--g6);margin-top:14px}
+.info-box strong{color:var(--oro)}
+/* scrollbar */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--g3);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">LIBERAL</div>
+    <div class="login-sub">Red de Venteros · CRM</div>
+    <div class="login-err" id="login-err"></div>
+    <div class="fg"><label>Cédula</label><input type="text" id="l-ced" placeholder="1000000001" autocomplete="username"></div>
+    <div class="fg"><label>Contraseña</label><input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="btn btn-p" style="width:100%;margin-top:8px;padding:10px" id="login-btn" onclick="doLogin()">Ingresar</button>
+    <div style="margin-top:16px;font-size:11px;color:var(--g5);text-align:center">
+      Demo: cédula <strong style="color:var(--g6)">1000000001</strong> · clave <strong style="color:var(--g6)">Liberal2025!</strong>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app" style="display:none">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-logo">L</div>
+    <div><div class="brand-name">LIBERAL</div><div class="brand-sub">Red de Venteros</div></div>
+  </div>
+  <div class="topbar-stats">
+    <div class="tstat"><div class="tstat-v" id="ts-v">–</div><div class="tstat-l">Venteros</div></div>
+    <div class="tstat"><div class="tstat-v" id="ts-a">–</div><div class="tstat-l">Activos</div></div>
+    <div class="tstat"><div class="tstat-v" id="ts-c">–</div><div class="tstat-l">Cajetillas/mes</div></div>
+    <div class="tstat"><div class="tstat-v" id="ts-z">–</div><div class="tstat-l">Zonas</div></div>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-p" onclick="openModal('m-nuevo')">+ Registrar ventero</button>
+    <div class="user-chip" onclick="doLogout()">
+      <div class="uavatar" id="ua">?</div>
+      <span class="uname" id="un">–</span>
+    </div>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="nav-sec">
+    <div class="nav-lbl">Principal</div>
+    <div class="nav-item active" onclick="go('dashboard',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" onclick="go('mapa',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      Mapa en vivo
+      <span class="nbadge" id="nb-online">–</span>
+    </div>
+    <div class="nav-item" onclick="go('venteros',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Venteros
+    </div>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">Comercial</div>
+    <div class="nav-item" onclick="go('premios',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+      Premios & Puntos
+    </div>
+    <div class="nav-item admin-only" onclick="go('mensajes',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      WhatsApp / SMS
+    </div>
+    <div class="nav-item" onclick="go('ventas',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Registrar venta
+    </div>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">Sistema</div>
+    <div class="nav-item admin-only" onclick="go('vendedores',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+      Vendedores internos
+    </div>
+    <div class="nav-item admin-only" onclick="go('seguridad',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Seguridad
+    </div>
+    <div class="nav-item admin-only" onclick="exportCSV()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Exportar CSV
+    </div>
+  </div>
+  <div class="sidebar-foot">
+    <div class="sync-dot"><div class="dot"></div><span id="sync-lbl">Conectando...</span></div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- DASHBOARD -->
+  <div id="panel-dashboard" class="panel active">
+    <div class="kpi-grid">
+      <div class="kpi r"><div class="kpi-lbl">Total venteros</div><div class="kpi-val" id="k-total">–</div><div class="kpi-d up" id="k-activos-d">–</div></div>
+      <div class="kpi g"><div class="kpi-lbl">Total puntos</div><div class="kpi-val" id="k-puntos">–</div><div class="kpi-d">en la red</div></div>
+      <div class="kpi v"><div class="kpi-lbl">Cajetillas/mes</div><div class="kpi-val" id="k-cajetas">–</div><div class="kpi-d up">↑ red acumulada</div></div>
+      <div class="kpi b"><div class="kpi-lbl">Canjes pendientes</div><div class="kpi-val" id="k-canjes">–</div><div class="kpi-d">por entregar</div></div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="sec-head"><span class="sec-ttl">🏆 Top venteros</span></div>
+        <div id="top-list">Cargando...</div>
+      </div>
+      <div class="card">
+        <div class="sec-head"><span class="sec-ttl">📍 Por zona</span></div>
+        <div id="zona-list">Cargando...</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-head"><span class="sec-ttl">Ventas recientes</span><button class="btn btn-o" onclick="go('ventas',null)">Ver todas</button></div>
+      <table><thead><tr><th>Ventero</th><th>Cajetillas</th><th>Puntos</th><th>Vendedor</th><th>Fecha</th></tr></thead>
+      <tbody id="ventas-recientes"></tbody></table>
+    </div>
+  </div>
+
+  <!-- MAPA -->
+  <div id="panel-mapa" class="panel-map">
+    <div class="map-search"><input type="text" placeholder="🔍 Buscar ventero o zona..." oninput="filterMap(this.value)"></div>
+    <div id="map"></div>
+    <div class="map-ctrl">
+      <button class="map-btn" onclick="centerMap()">📍 Mi ubicación</button>
+      <button class="map-btn" onclick="reportarUbicacion()">🔄 Actualizar mi posición</button>
+      <button class="map-btn" onclick="exportCSV()">⬇ Exportar CSV</button>
+    </div>
+    <div class="map-legend">
+      <div style="font-size:10px;color:var(--g5);margin-bottom:7px;text-transform:uppercase;letter-spacing:1px">Leyenda</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#1DB954"></div>Ventero activo</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#D4AF37"></div>Top ventero</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#888"></div>Inactivo</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#3B82F6"></div>Vendedor</div>
+    </div>
+  </div>
+
+  <!-- VENTEROS -->
+  <div id="panel-venteros" class="panel">
+    <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;">
+      <input type="text" placeholder="Buscar por nombre o cédula..." style="flex:1;background:var(--g2);border:1px solid var(--g3);border-radius:7px;color:var(--blanco);padding:8px 11px;font-size:12px;outline:none;font-family:'Inter',sans-serif" oninput="buscarVenteros(this.value)">
+      <select style="background:var(--g2);border:1px solid var(--g3);border-radius:7px;color:var(--blanco);padding:8px 10px;font-size:12px;outline:none;font-family:'Inter',sans-serif" onchange="buscarPorZona(this.value)">
+        <option value="">Todas las zonas</option>
+        <option>Centro</option><option>Sur</option><option>Norte</option><option>Occidente</option><option>Oriente</option><option>Laureles</option><option>Envigado</option>
+      </select>
+      <button class="btn btn-p" onclick="openModal('m-nuevo')">+ Nuevo</button>
+    </div>
+    <div id="venteros-list">Cargando...</div>
+  </div>
+
+  <!-- PREMIOS -->
+  <div id="panel-premios" class="panel">
+    <div style="background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2);border-radius:8px;padding:11px 14px;margin-bottom:16px;font-size:12px;color:var(--g6)">
+      Cada cajetilla vendida = <strong style="color:var(--oro)">10 puntos</strong> · Referir ventero = <strong style="color:var(--oro)">500 puntos</strong> · Meta mensual = <strong style="color:var(--oro)">bonus ×2</strong>
+    </div>
+    <div class="sec-head"><span class="sec-ttl">🎁 Catálogo de premios</span><button class="btn btn-o admin-only" onclick="openModal('m-premio')">+ Agregar premio</button></div>
+    <div class="premios-grid" id="premios-grid">Cargando...</div>
+  </div>
+
+  <!-- MENSAJES -->
+  <div id="panel-mensajes" class="panel admin-only">
+    <div class="card" style="max-width:640px">
+      <div class="modal-ttl" style="margin-bottom:18px">📲 Envío masivo WhatsApp / SMS</div>
+      <div class="fg-grid">
+        <div class="fg"><label>Canal</label>
+          <select id="msg-canal"><option value="whatsapp">WhatsApp</option><option value="sms">SMS</option></select>
+        </div>
+        <div class="fg"><label>Zona (opcional)</label>
+          <select id="msg-zona"><option value="">Todas las zonas</option><option>Centro</option><option>Sur</option><option>Norte</option><option>Occidente</option><option>Oriente</option><option>Laureles</option><option>Envigado</option></select>
+        </div>
+        <div class="fg fg-full"><label>Mensaje (usa {{nombre}} para personalizar)</label>
+          <textarea id="msg-texto" rows="4" placeholder="¡Hola {{nombre}}! Esta semana doble puntos en zona Centro. ¡Vende más LIBERAL! 🎯"></textarea>
+        </div>
+      </div>
+      <div class="info-box">
+        <strong>📌 Nota:</strong> El mensaje llegará a todos los venteros activos en la zona seleccionada. Se personalizará automáticamente con el nombre de cada ventero.
+      </div>
+      <button class="btn btn-p" style="margin-top:16px;padding:10px 24px" onclick="enviarMasivo()">🚀 Enviar ahora</button>
+      <div id="msg-result" style="margin-top:12px;font-size:12px;color:var(--verde)"></div>
+    </div>
+  </div>
+
+  <!-- VENTAS -->
+  <div id="panel-ventas" class="panel">
+    <div class="two-col">
+      <div class="card">
+        <div class="modal-ttl" style="margin-bottom:16px">📦 Registrar venta</div>
+        <div class="fg"><label>Ventero *</label>
+          <select id="v-ventero"><option value="">Seleccionar ventero...</option></select>
+        </div>
+        <div class="fg"><label>Cajetillas vendidas *</label>
+          <input type="number" id="v-cajetillas" placeholder="ej: 40" min="1">
+        </div>
+        <div class="fg"><label>Notas</label>
+          <input type="text" id="v-notas" placeholder="Observaciones opcionales">
+        </div>
+        <div id="v-puntos-preview" style="display:none;background:rgba(29,185,84,.08);border:1px solid rgba(29,185,84,.2);border-radius:7px;padding:9px 12px;font-size:12px;margin-bottom:10px;color:var(--verde)"></div>
+        <button class="btn btn-p" style="width:100%;padding:10px" onclick="registrarVenta()">✓ Registrar venta y sumar puntos</button>
+      </div>
+      <div class="card">
+        <div class="sec-head"><span class="sec-ttl">Historial de ventas</span></div>
+        <div id="ventas-historial" style="max-height:400px;overflow-y:auto">Cargando...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VENDEDORES -->
+  <div id="panel-vendedores" class="panel admin-only">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:600">Equipo de vendedores internos</div>
+      <button class="btn btn-p" onclick="openModal('m-vendedor')">+ Agregar vendedor</button>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <table><thead><tr><th>Vendedor</th><th>Zona</th><th>Venteros</th><th>Cajetillas</th><th>Última conexión</th><th>Estado</th></tr></thead>
+      <tbody id="tabla-vendedores"></tbody></table>
+    </div>
+  </div>
+
+  <!-- SEGURIDAD -->
+  <div id="panel-seguridad" class="panel admin-only">
+    <div class="two-col">
+      <div class="card">
+        <div class="sec-head"><span class="sec-ttl">Registro de auditoría</span></div>
+        <div id="audit-log" style="max-height:500px;overflow-y:auto">Cargando...</div>
+      </div>
+      <div class="card">
+        <div class="sec-head"><span class="sec-ttl">Cambiar contraseña</span></div>
+        <div class="fg"><label>Nueva contraseña (mín. 8 caracteres)</label><input type="password" id="np-pass" placeholder="Nueva contraseña"></div>
+        <div class="fg"><label>Confirmar</label><input type="password" id="np-pass2" placeholder="Repetir contraseña"></div>
+        <button class="btn btn-p" style="margin-top:6px" onclick="cambiarPassword()">Actualizar contraseña</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- MODALES -->
+<!-- Nuevo ventero -->
+<div class="modal-ov" id="m-nuevo">
+  <div class="modal">
+    <div class="modal-head"><span class="modal-ttl">Registrar nuevo ventero</span><button class="modal-close" onclick="closeModal('m-nuevo')">✕</button></div>
+    <div class="fg-grid">
+      <div class="fg"><label>Nombre completo *</label><input type="text" id="mn-nombre" placeholder="Pedro García López"></div>
+      <div class="fg"><label>Cédula *</label><input type="text" id="mn-ced" placeholder="1.012.345.678"></div>
+      <div class="fg"><label>Teléfono *</label><input type="tel" id="mn-tel" placeholder="311 234 5678"></div>
+      <div class="fg"><label>WhatsApp</label><input type="tel" id="mn-wa" placeholder="311 234 5678"></div>
+      <div class="fg"><label>Zona *</label>
+        <select id="mn-zona"><option value="">Zona...</option><option>Centro</option><option>Sur</option><option>Norte</option><option>Occidente</option><option>Oriente</option><option>Laureles</option><option>Envigado</option></select>
+      </div>
+      <div class="fg"><label>Tipo de punto</label>
+        <select id="mn-tipo"><option>Ambulante</option><option>Puesto fijo</option><option>Tienda de barrio</option><option>Quiosco</option></select>
+      </div>
+      <div class="fg fg-full"><label>Dirección / Referencia</label><input type="text" id="mn-dir" placeholder="Calle 45 con Av. El Poblado, frente al parque"></div>
+      <div class="fg"><label>Lat (GPS automático)</label><input type="number" id="mn-lat" placeholder="6.244203" step="0.000001" readonly></div>
+      <div class="fg"><label>Lng</label><input type="number" id="mn-lng" placeholder="-75.581211" step="0.000001" readonly></div>
+      <div class="fg"><label>Cajetillas semana estimadas</label><input type="number" id="mn-caj" placeholder="40" min="0"></div>
+      <div class="fg fg-full"><label>Observaciones</label><textarea id="mn-obs" placeholder="Notas adicionales..."></textarea></div>
+    </div>
+    <button class="btn btn-g" style="width:100%;margin-bottom:8px;padding:8px" onclick="capturarGPS()">📍 Capturar coordenadas GPS</button>
+    <div class="info-box" style="margin-top:0;margin-bottom:14px">
+      <strong>Automático al guardar:</strong> Se genera QR único de check-in y se envía mensaje de bienvenida por WhatsApp.
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-o" onclick="closeModal('m-nuevo')">Cancelar</button>
+      <button class="btn btn-p" onclick="crearVentero()">✓ Registrar ventero</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR modal -->
+<div class="modal-ov" id="m-qr">
+  <div class="modal" style="max-width:340px;text-align:center">
+    <div class="modal-head"><span class="modal-ttl">Código QR de check-in</span><button class="modal-close" onclick="closeModal('m-qr')">✕</button></div>
+    <img id="qr-img" class="qr-img" width="240" height="240" alt="QR Code">
+    <div id="qr-name" style="font-weight:600;margin-bottom:4px"></div>
+    <div style="font-size:11px;color:var(--g5);margin-bottom:16px">El vendedor escanea este QR para registrar visita con GPS</div>
+    <button class="btn btn-g" onclick="window.print()">🖨 Imprimir</button>
+  </div>
+</div>
+
+<!-- Canje -->
+<div class="modal-ov" id="m-canje">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head"><span class="modal-ttl">Solicitar canje de premio</span><button class="modal-close" onclick="closeModal('m-canje')">✕</button></div>
+    <div class="fg"><label>Ventero</label><select id="cj-ventero"><option value="">Seleccionar...</option></select></div>
+    <div id="cj-puntos-disp" style="font-size:12px;color:var(--oro);margin-bottom:10px"></div>
+    <div class="fg"><label>Premio</label><select id="cj-premio"><option value="">Seleccionar...</option></select></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-o" onclick="closeModal('m-canje')">Cancelar</button>
+      <button class="btn btn-p" onclick="solicitarCanje()">✓ Confirmar canje</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nuevo vendedor -->
+<div class="modal-ov" id="m-vendedor">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-head"><span class="modal-ttl">Agregar vendedor interno</span><button class="modal-close" onclick="closeModal('m-vendedor')">✕</button></div>
+    <div class="fg-grid">
+      <div class="fg"><label>Nombre *</label><input type="text" id="nv-nombre" placeholder="Nombre completo"></div>
+      <div class="fg"><label>Cédula *</label><input type="text" id="nv-ced" placeholder="No. cédula"></div>
+      <div class="fg"><label>Celular *</label><input type="tel" id="nv-tel" placeholder="311 000 0000"></div>
+      <div class="fg"><label>Zona</label><select id="nv-zona"><option>Centro</option><option>Sur</option><option>Norte</option><option>Occidente</option><option>Oriente</option><option>Laureles</option><option>Envigado</option></select></div>
+      <div class="fg fg-full"><label>Correo</label><input type="email" id="nv-email" placeholder="vendedor@liberal.co"></div>
+      <div class="fg fg-full"><label>Contraseña inicial *</label><input type="text" id="nv-pass" placeholder="Mínimo 8 caracteres"></div>
+    </div>
+    <div class="info-box" style="margin-bottom:14px"><strong>Automático:</strong> Se envía SMS al celular con las credenciales de acceso.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-o" onclick="closeModal('m-vendedor')">Cancelar</button>
+      <button class="btn btn-p" onclick="crearVendedor()">✓ Crear cuenta y enviar credenciales</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nuevo premio -->
+<div class="modal-ov" id="m-premio">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head"><span class="modal-ttl">Agregar premio al catálogo</span><button class="modal-close" onclick="closeModal('m-premio')">✕</button></div>
+    <div class="fg-grid">
+      <div class="fg"><label>Nombre *</label><input type="text" id="pr-nombre" placeholder="Nombre del premio"></div>
+      <div class="fg"><label>Icono (emoji)</label><input type="text" id="pr-icon" placeholder="🎁"></div>
+      <div class="fg"><label>Puntos requeridos *</label><input type="number" id="pr-pts" placeholder="500" min="1"></div>
+      <div class="fg"><label>Stock inicial</label><input type="number" id="pr-stk" placeholder="50" min="0"></div>
+      <div class="fg fg-full"><label>Descripción</label><input type="text" id="pr-desc" placeholder="Descripción del premio"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-o" onclick="closeModal('m-premio')">Cancelar</button>
+      <button class="btn btn-p" onclick="crearPremio()">✓ Agregar al catálogo</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────
+const API = ''; // mismo origen; en producción: 'https://tudominio.com'
+let TOKEN = localStorage.getItem('liberal_token') || '';
+let ME    = JSON.parse(localStorage.getItem('liberal_me') || 'null');
+let map, mapMarkers = [], mapaOk = false;
+let VENTEROS_CACHE = [], PREMIOS_CACHE = [];
+
+// ── AUTH ────────────────────────────────────────────────
+async function doLogin() {
+  const btn = document.getElementById('login-btn');
+  btn.innerHTML = '<span class="spin"></span>';
+  btn.disabled = true;
+  const err = document.getElementById('login-err');
+  err.style.display = 'none';
+
+  try {
+    const r = await api('POST', '/auth/login', {
+      cedula:   document.getElementById('l-ced').value.trim(),
+      password: document.getElementById('l-pass').value
+    }, false);
+    TOKEN = r.token;
+    ME    = r.usuario;
+    localStorage.setItem('liberal_token', TOKEN);
+    localStorage.setItem('liberal_me', JSON.stringify(ME));
+    iniciarApp();
+  } catch(e) {
+    err.textContent = e.message || 'Error de conexión con el servidor';
+    err.style.display = 'block';
+  } finally {
+    btn.innerHTML = 'Ingresar';
+    btn.disabled = false;
+  }
+}
+
+function doLogout() {
+  api('POST', '/auth/logout').catch(()=>{});
+  TOKEN = ''; ME = null;
+  localStorage.removeItem('liberal_token');
+  localStorage.removeItem('liberal_me');
+  location.reload();
+}
+
+document.getElementById('l-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+// ── API HELPER ──────────────────────────────────────────
+async function api(method, path, body, auth = true) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (auth) opts.headers['Authorization'] = 'Bearer ' + TOKEN;
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + '/api' + path, opts);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || `Error ${r.status}`);
+  return d;
+}
+
+// ── INIT APP ────────────────────────────────────────────
+async function iniciarApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'grid';
+
+  // Nombre de usuario
+  document.getElementById('ua').textContent = (ME?.nombre||'?').split(' ').map(p=>p[0]).slice(0,2).join('');
+  document.getElementById('un').textContent = (ME?.nombre||'').split(' ')[0];
+
+  // Ocultar secciones de admin si es vendedor/visor
+  if (ME?.rol !== 'admin') {
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+  }
+
+  document.getElementById('sync-lbl').textContent = 'En línea · ' + new Date().toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit'});
+
+  await Promise.all([cargarDashboard(), cargarVenteros(), cargarPremios(), cargarVentas()]);
+  if (ME?.rol === 'admin') { cargarVendedores(); cargarAudit(); }
+}
+
+// ── DASHBOARD ───────────────────────────────────────────
+async function cargarDashboard() {
+  try {
+    const d = await api('GET', '/dashboard');
+    const k = d.kpis;
+
+    // TopBar stats
+    document.getElementById('ts-v').textContent  = k.total_venteros;
+    document.getElementById('ts-a').textContent  = k.activos;
+    document.getElementById('ts-c').textContent  = k.total_cajetillas.toLocaleString('es-CO');
+    document.getElementById('ts-z').textContent  = k.zonas;
+    document.getElementById('nb-online').textContent = k.activos;
+
+    // KPIs
+    document.getElementById('k-total').textContent  = k.total_venteros;
+    document.getElementById('k-activos-d').textContent = `${k.activos} activos`;
+    document.getElementById('k-puntos').textContent = k.total_puntos.toLocaleString('es-CO');
+    document.getElementById('k-cajetas').textContent = k.total_cajetillas.toLocaleString('es-CO');
+    document.getElementById('k-canjes').textContent = k.canjes_pendientes;
+
+    // Top venteros
+    const maxPts = d.top_venteros[0]?.puntos || 1;
+    document.getElementById('top-list').innerHTML = d.top_venteros.map((v,i) => `
+      <div class="rank-item">
+        <div class="rnum">${i+1}</div>
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+            <span>${v.nombre}</span><span style="color:var(--g5)">${v.zona}</span>
+          </div>
+          <div class="rbar-w"><div class="rbar" style="width:${Math.round(v.puntos/maxPts*100)}%;background:${i===0?'var(--oro)':'var(--rojo)'}"></div></div>
+        </div>
+        <div style="font-size:12px;color:var(--oro);font-weight:600;margin-left:8px">${v.puntos.toLocaleString('es-CO')}</div>
+      </div>`).join('');
+
+    // Por zona
+    const maxZ = Math.max(...d.por_zona.map(z=>z.cantidad));
+    document.getElementById('zona-list').innerHTML = d.por_zona.map(z => `
+      <div class="rank-item">
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+            <span>${z.zona}</span><span style="color:var(--g5)">${z.cantidad} venteros</span>
+          </div>
+          <div class="rbar-w"><div class="rbar" style="width:${Math.round(z.cantidad/maxZ*100)}%;background:var(--azul)"></div></div>
+        </div>
+      </div>`).join('');
+
+    // Ventas recientes
+    document.getElementById('ventas-recientes').innerHTML = d.ventas_recientes.map(v => `
+      <tr>
+        <td><strong>${v.ventero}</strong></td>
+        <td>${v.cajetillas}</td>
+        <td style="color:var(--oro)">${v.puntos_gen}</td>
+        <td style="color:var(--g5)">${v.vendedor||'–'}</td>
+        <td style="color:var(--g5)">${fmtFecha(v.fecha)}</td>
+      </tr>`).join('');
+
+  } catch(e) { toast('Error cargando dashboard: ' + e.message); }
+}
+
+// ── VENTEROS ────────────────────────────────────────────
+async function cargarVenteros(q = '', zona = '') {
+  try {
+    let url = '/venteros?';
+    if (q)    url += `q=${encodeURIComponent(q)}&`;
+    if (zona) url += `zona=${encodeURIComponent(zona)}&`;
+    VENTEROS_CACHE = await api('GET', url);
+    renderVenteros(VENTEROS_CACHE);
+    poblarSelectVenteros();
+  } catch(e) { document.getElementById('venteros-list').textContent = 'Error: ' + e.message; }
+}
+
+function renderVenteros(lista) {
+  if (!lista.length) { document.getElementById('venteros-list').innerHTML = '<div style="color:var(--g5);padding:20px;text-align:center">Sin venteros en esta búsqueda</div>'; return; }
+  document.getElementById('venteros-list').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">
+      ${lista.map(v => `
+      <div class="vcard">
+        <div class="vavatar">${initiales(v.nombre)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;margin-bottom:2px">${v.nombre}</div>
+          <div style="font-size:10px;color:var(--g5);margin-bottom:5px">${v.zona} · ${v.tipo} · CC ${v.cedula}</div>
+          <div style="display:flex;gap:10px;font-size:11px;margin-bottom:5px">
+            <span style="color:var(--oro);font-weight:600">${(v.puntos||0).toLocaleString('es-CO')} pts</span>
+            <span style="color:var(--g6)">${v.cajetillas||0} caj/mes</span>
+            <span style="color:var(--g5)">${v.vendedor_nombre||'Sin asignar'}</span>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span class="pill ${v.estado==='activo'?'p-a':v.estado==='nuevo'?'p-n':'p-i'}">${v.estado}</span>
+            <button class="btn btn-g" style="padding:2px 7px;font-size:10px" onclick="verQR(${v.id},'${v.nombre}')">QR</button>
+            <button class="btn btn-g" style="padding:2px 7px;font-size:10px" onclick="abrirCanje(${v.id})">Canjear</button>
+            <a href="https://wa.me/57${(v.whatsapp||v.tel||'').replace(/\D/g,'')}" target="_blank" style="font-size:10px;color:var(--verde);text-decoration:none;padding:2px 7px;background:rgba(29,185,84,.1);border-radius:5px">WA</a>
+          </div>
+        </div>
+      </div>`).join('')}
+    </div>`;
+}
+
+function buscarVenteros(q) { cargarVenteros(q); }
+function buscarPorZona(z)  { cargarVenteros('', z); }
+
+function poblarSelectVenteros() {
+  const opts = VENTEROS_CACHE.map(v => `<option value="${v.id}">${v.nombre} (${v.zona})</option>`).join('');
+  ['v-ventero', 'cj-ventero'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">Seleccionar ventero...</option>' + opts;
+  });
+}
+
+async function crearVentero() {
+  const nombre = document.getElementById('mn-nombre').value.trim();
+  const cedula = document.getElementById('mn-ced').value.trim();
+  const tel    = document.getElementById('mn-tel').value.trim();
+  const zona   = document.getElementById('mn-zona').value;
+  if (!nombre || !cedula || !tel || !zona) { toast('⚠ Nombre, cédula, teléfono y zona son requeridos'); return; }
+
+  try {
+    const v = await api('POST', '/venteros', {
+      nombre, cedula, tel,
+      whatsapp:   document.getElementById('mn-wa').value.trim(),
+      zona,
+      tipo:       document.getElementById('mn-tipo').value,
+      direccion:  document.getElementById('mn-dir').value,
+      lat:        parseFloat(document.getElementById('mn-lat').value) || null,
+      lng:        parseFloat(document.getElementById('mn-lng').value) || null,
+      cajetillas: parseInt(document.getElementById('mn-caj').value) || 0,
+      observaciones: document.getElementById('mn-obs').value
+    });
+    closeModal('m-nuevo');
+    toast(`✓ ${v.nombre} registrado · QR generado · WA de bienvenida enviado`);
+    await cargarVenteros();
+    await cargarDashboard();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+function capturarGPS() {
+  if (!navigator.geolocation) { toast('GPS no disponible en este dispositivo'); return; }
+  toast('📍 Obteniendo coordenadas...');
+  navigator.geolocation.getCurrentPosition(p => {
+    document.getElementById('mn-lat').value = p.coords.latitude.toFixed(6);
+    document.getElementById('mn-lng').value = p.coords.longitude.toFixed(6);
+    toast('✓ Coordenadas capturadas');
+  }, () => toast('⚠ Sin acceso al GPS'));
+}
+
+async function verQR(id, nombre) {
+  try {
+    const d = await api('GET', `/qr/${id}`);
+    document.getElementById('qr-img').src = d.qr;
+    document.getElementById('qr-name').textContent = nombre;
+    openModal('m-qr');
+  } catch(e) { toast('Error obteniendo QR: ' + e.message); }
+}
+
+// ── VENTAS ──────────────────────────────────────────────
+async function cargarVentas() {
+  try {
+    const ventas = await api('GET', '/ventas');
+    document.getElementById('ventas-historial').innerHTML = ventas.length
+      ? ventas.map(v => `
+          <div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px">
+            <div style="display:flex;justify-content:space-between">
+              <strong>${v.ventero_nombre}</strong>
+              <span style="color:var(--oro)">+${v.puntos_gen} pts</span>
+            </div>
+            <div style="color:var(--g5)">${v.cajetillas} cajetillas · ${v.vendedor_nombre||'–'} · ${fmtFecha(v.fecha)}</div>
+          </div>`).join('')
+      : '<div style="color:var(--g5);padding:20px;text-align:center">Sin ventas registradas</div>';
+  } catch(e) {}
+}
+
+document.getElementById('v-cajetillas')?.addEventListener('input', function() {
+  const n = parseInt(this.value) || 0;
+  const p = n * 10;
+  const el = document.getElementById('v-puntos-preview');
+  if (n > 0) {
+    el.style.display = 'block';
+    el.textContent = `✓ ${n} cajetillas = ${p} puntos para el ventero`;
+  } else { el.style.display = 'none'; }
+});
+
+async function registrarVenta() {
+  const vid = document.getElementById('v-ventero').value;
+  const caj = parseInt(document.getElementById('v-cajetillas').value);
+  if (!vid || !caj) { toast('⚠ Selecciona ventero e ingresa cajetillas'); return; }
+  try {
+    const r = await api('POST', '/ventas', { ventero_id: vid, cajetillas: caj, notas: document.getElementById('v-notas').value });
+    toast(`✓ Venta registrada · ${r.puntos_ganados} puntos sumados · WA notificado`);
+    document.getElementById('v-ventero').value = '';
+    document.getElementById('v-cajetillas').value = '';
+    document.getElementById('v-notas').value = '';
+    document.getElementById('v-puntos-preview').style.display = 'none';
+    await cargarVentas();
+    await cargarDashboard();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+// ── PREMIOS ─────────────────────────────────────────────
+async function cargarPremios() {
+  try {
+    PREMIOS_CACHE = await api('GET', '/premios');
+    document.getElementById('premios-grid').innerHTML = PREMIOS_CACHE.map(p => `
+      <div class="premio-card">
+        <div class="p-icon">${p.icono}</div>
+        <div class="p-name2">${p.nombre}</div>
+        <div class="p-pts">${p.puntos_req.toLocaleString('es-CO')} puntos</div>
+        <div class="p-stk">Stock: ${p.stock} disponibles</div>
+        <div class="p-desc">${p.descripcion||''}</div>
+        <button class="btn-canje" onclick="abrirCanje(null,${p.id})">Solicitar canje</button>
+      </div>`).join('');
+
+    const opts = PREMIOS_CACHE.map(p => `<option value="${p.id}">${p.icono} ${p.nombre} (${p.puntos_req} pts)</option>`).join('');
+    document.getElementById('cj-premio').innerHTML = '<option value="">Seleccionar premio...</option>' + opts;
+  } catch(e) {}
+}
+
+function abrirCanje(venteroId = null, premioId = null) {
+  if (venteroId) document.getElementById('cj-ventero').value = venteroId;
+  if (premioId)  document.getElementById('cj-premio').value  = premioId;
+  openModal('m-canje');
+  actualizarPuntosDisp();
+}
+
+function actualizarPuntosDisp() {
+  const vid = document.getElementById('cj-ventero').value;
+  if (!vid) { document.getElementById('cj-puntos-disp').textContent = ''; return; }
+  const v = VENTEROS_CACHE.find(x => x.id == vid);
+  if (v) document.getElementById('cj-puntos-disp').textContent = `Puntos disponibles: ${v.puntos.toLocaleString('es-CO')}`;
+}
+document.getElementById('cj-ventero')?.addEventListener('change', actualizarPuntosDisp);
+
+async function solicitarCanje() {
+  const vid = document.getElementById('cj-ventero').value;
+  const pid = document.getElementById('cj-premio').value;
+  if (!vid || !pid) { toast('⚠ Selecciona ventero y premio'); return; }
+  try {
+    await api('POST', '/canjes', { ventero_id: vid, premio_id: pid });
+    closeModal('m-canje');
+    toast('✓ Canje registrado · WA enviado al ventero');
+    await cargarPremios();
+    await cargarDashboard();
+    await cargarVenteros();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+async function crearPremio() {
+  const nombre = document.getElementById('pr-nombre').value.trim();
+  const pts    = parseInt(document.getElementById('pr-pts').value);
+  if (!nombre || !pts) { toast('⚠ Nombre y puntos son requeridos'); return; }
+  try {
+    await api('POST', '/premios', {
+      nombre, puntos_req: pts,
+      icono: document.getElementById('pr-icon').value || '🎁',
+      stock: parseInt(document.getElementById('pr-stk').value) || 0,
+      descripcion: document.getElementById('pr-desc').value
+    });
+    closeModal('m-premio');
+    toast('✓ Premio agregado al catálogo');
+    await cargarPremios();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+// ── MENSAJERÍA ──────────────────────────────────────────
+async function enviarMasivo() {
+  const mensaje = document.getElementById('msg-texto').value.trim();
+  const zona    = document.getElementById('msg-zona').value;
+  const canal   = document.getElementById('msg-canal').value;
+  if (!mensaje) { toast('⚠ Escribe el mensaje'); return; }
+  try {
+    const r = await api('POST', '/mensajes/masivo', { mensaje, zona, canal });
+    document.getElementById('msg-result').textContent = `✓ ${r.mensaje} (${r.destinatarios} destinatarios)`;
+    toast(`✓ Envío iniciado a ${r.destinatarios} venteros`);
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+// ── VENDEDORES INTERNOS ──────────────────────────────────
+async function cargarVendedores() {
+  try {
+    const users = await api('GET', '/usuarios');
+    const vends = users.filter(u => u.rol === 'vendedor');
+    document.getElementById('tabla-vendedores').innerHTML = vends.map(u => `
+      <tr>
+        <td><strong>${u.nombre}</strong><div style="font-size:10px;color:var(--g5)">${u.email||''}</div></td>
+        <td>${u.zona||'–'}</td>
+        <td>${VENTEROS_CACHE.filter(v=>v.vendedor_id==u.id).length}</td>
+        <td>${VENTEROS_CACHE.filter(v=>v.vendedor_id==u.id).reduce((s,v)=>s+(v.cajetillas||0),0).toLocaleString('es-CO')}</td>
+        <td style="font-size:11px;color:var(--g5)">${u.ultimo_login ? fmtFecha(u.ultimo_login) : 'Nunca'}</td>
+        <td><span class="pill ${u.activo?'p-a':'p-i'}">${u.activo?'Activo':'Inactivo'}</span></td>
+      </tr>`).join('');
+  } catch(e) {}
+}
+
+async function crearVendedor() {
+  const nombre = document.getElementById('nv-nombre').value.trim();
+  const cedula = document.getElementById('nv-ced').value.trim();
+  const pass   = document.getElementById('nv-pass').value;
+  if (!nombre || !cedula || !pass) { toast('⚠ Nombre, cédula y contraseña requeridos'); return; }
+  try {
+    await api('POST', '/usuarios', {
+      nombre, cedula, password: pass,
+      tel:   document.getElementById('nv-tel').value,
+      email: document.getElementById('nv-email').value,
+      zona:  document.getElementById('nv-zona').value,
+      rol:   'vendedor'
+    });
+    closeModal('m-vendedor');
+    toast('✓ Vendedor creado · Credenciales enviadas por SMS');
+    await cargarVendedores();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+// ── SEGURIDAD ────────────────────────────────────────────
+async function cargarAudit() {
+  try {
+    const d = await api('GET', '/dashboard');
+    document.getElementById('audit-log').innerHTML = d.audit_log.map(l => `
+      <div style="display:flex;gap:9px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px;align-items:flex-start">
+        <span style="color:var(--g5);white-space:nowrap">${fmtFecha(l.fecha)}</span>
+        <span style="color:var(--g6);flex:1">${l.accion} <span style="color:var(--g5)">· ${l.usuario||'Sistema'}</span></span>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+async function cambiarPassword() {
+  const p1 = document.getElementById('np-pass').value;
+  const p2 = document.getElementById('np-pass2').value;
+  if (!p1 || p1 !== p2) { toast('⚠ Las contraseñas no coinciden'); return; }
+  if (p1.length < 8)    { toast('⚠ Mínimo 8 caracteres'); return; }
+  try {
+    await api('PATCH', `/usuarios/${ME.id}/password`, { password: p1 });
+    toast('✓ Contraseña actualizada');
+    document.getElementById('np-pass').value = '';
+    document.getElementById('np-pass2').value = '';
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+// ── MAPA ─────────────────────────────────────────────────
+async function initMapa() {
+  if (mapaOk) { map.invalidateSize(); return; }
+  mapaOk = true;
+  map = L.map('map', { zoomControl: false }).setView([6.2442, -75.5812], 13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '©OSM ©CartoDB', maxZoom: 19
+  }).addTo(map);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+  await pintarVenterosEnMapa();
+  if (ME?.rol !== 'visor') iniciarRastreoVendedor();
+}
+
+async function pintarVenterosEnMapa() {
+  mapMarkers.forEach(m => map.removeLayer(m));
+  mapMarkers = [];
+  const lista = VENTEROS_CACHE.length ? VENTEROS_CACHE : await api('GET', '/venteros');
+  lista.filter(v => v.lat && v.lng).forEach(v => {
+    const color = v.puntos > 5000 ? '#D4AF37' : v.estado === 'activo' ? '#1DB954' : '#888';
+    const icon  = L.divIcon({
+      html: `<div style="width:11px;height:11px;background:${color};border-radius:50%;border:2px solid rgba(0,0,0,.5)"></div>`,
+      className: '', iconSize: [11,11], iconAnchor: [5,5]
+    });
+    const m = L.marker([v.lat, v.lng], { icon }).addTo(map)
+      .bindPopup(`
+        <div class="p-name">${v.nombre}</div>
+        <div class="p-meta">${v.zona} · ${v.tipo||''}</div>
+        <div class="p-row"><span>Puntos</span><span>${(v.puntos||0).toLocaleString('es-CO')}</span></div>
+        <div class="p-row"><span>Cajetillas/mes</span><span>${v.cajetillas||0}</span></div>
+        <div class="p-row"><span>Estado</span><span>${v.estado}</span></div>
+        <div class="p-row"><span>Vendedor</span><span>${v.vendedor_nombre||'–'}</span></div>
+      `);
+    m._v = v;
+    mapMarkers.push(m);
+  });
+
+  // Vendedores (azul)
+  try {
+    const ubicaciones = await api('GET', '/ubicaciones');
+    ubicaciones.forEach(u => {
+      if (!u.lat || !u.lng) return;
+      const icon = L.divIcon({
+        html: `<div style="width:13px;height:13px;background:#3B82F6;border-radius:50%;border:2px solid rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;color:#fff">V</div>`,
+        className: '', iconSize: [13,13], iconAnchor: [6,6]
+      });
+      L.marker([u.lat, u.lng], { icon }).addTo(map)
+        .bindPopup(`<div class="p-name">${u.nombre}</div><div class="p-meta" style="color:#3B82F6">Vendedor · ${u.zona||''}</div>`);
+    });
+  } catch(e) {}
+}
+
+function filterMap(q) {
+  mapMarkers.forEach(m => {
+    const v = m._v;
+    const match = !q || v.nombre.toLowerCase().includes(q.toLowerCase()) || v.zona.toLowerCase().includes(q.toLowerCase());
+    match ? m.addTo(map) : map.removeLayer(m);
+  });
+}
+
+function centerMap() {
+  if (navigator.geolocation) navigator.geolocation.getCurrentPosition(
+    p => map.setView([p.coords.latitude, p.coords.longitude], 15),
+    () => map.setView([6.2442, -75.5812], 13)
+  );
+}
+
+function reportarUbicacion() {
+  if (!navigator.geolocation) { toast('GPS no disponible'); return; }
+  navigator.geolocation.getCurrentPosition(async p => {
+    try {
+      await api('POST', '/ubicacion', { lat: p.coords.latitude, lng: p.coords.longitude });
+      toast('✓ Ubicación actualizada en el servidor');
+    } catch(e) {}
+  });
+}
+
+function iniciarRastreoVendedor() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.watchPosition(async p => {
+    await api('POST', '/ubicacion', { lat: p.coords.latitude, lng: p.coords.longitude }).catch(()=>{});
+  }, null, { enableHighAccuracy: true, timeout: 30000, maximumAge: 60000 });
+}
+
+// ── EXPORTAR CSV ──────────────────────────────────────────
+async function exportCSV() {
+  const pin = prompt('Ingresa el PIN de exportación:');
+  if (!pin) return;
+  try {
+    const r = await fetch(`${API}/api/export/venteros?pin=${encodeURIComponent(pin)}`, {
+      headers: { 'Authorization': 'Bearer ' + TOKEN }
+    });
+    if (!r.ok) { const d = await r.json(); toast('Error: ' + (d.error||r.status)); return; }
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `liberal-venteros-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    toast('⬇ CSV exportado exitosamente');
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+// ── NAVEGACIÓN ────────────────────────────────────────────
+function go(id, el) {
+  document.querySelectorAll('.panel,.panel-map').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const target = document.getElementById('panel-' + id);
+  if (target) target.classList.add('active');
+  if (el) el.classList.add('active');
+  if (id === 'mapa') setTimeout(initMapa, 100);
+  if (id === 'seguridad') cargarAudit();
+}
+
+// ── MODALES ───────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-ov').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+
+// ── TOAST ─────────────────────────────────────────────────
+let toastT;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove('show'), 3400);
+}
+
+// ── UTILS ─────────────────────────────────────────────────
+function initiales(n) { return (n||'?').split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase(); }
+function fmtFecha(f) {
+  if (!f) return '–';
+  const d = new Date(f);
+  return isNaN(d) ? f : d.toLocaleString('es-CO', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+
+// ── AUTO-LOGIN ────────────────────────────────────────────
+if (TOKEN && ME) {
+  api('GET', '/auth/me').then(() => iniciarApp()).catch(() => {
+    TOKEN = ''; ME = null;
+    localStorage.removeItem('liberal_token');
+    localStorage.removeItem('liberal_me');
+  });
+}
+
+// Recarga de datos cada 2 min
+setInterval(async () => {
+  if (!TOKEN) return;
+  await cargarDashboard().catch(()=>{});
+}, 120000);
+</script>
+</body>
+</html>
