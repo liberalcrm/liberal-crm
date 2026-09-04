@@ -9,7 +9,7 @@ const path       = require('path');
 const app = express();
 
 // ── SEGURIDAD ─────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false }));
+app.set('trust proxy', 1);app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: '*', methods: ['GET','POST','PATCH','DELETE'] }));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
