@@ -133,14 +133,14 @@ function seed() {
   insertUser.run({ nombre:'Juan Pérez (Admin)',  cedula:'1000000001', email:'admin@liberal.co',    tel:'3001234567', password:hash, rol:'admin',    zona:null });
   insertUser.run({ nombre:'Carlos Reyes',        cedula:'1000000002', email:'carlos@liberal.co',   tel:'3112345678', password:hash, rol:'vendedor', zona:'Sur' });
   insertUser.run({ nombre:'Diana Mora',          cedula:'1000000003', email:'diana@liberal.co',    tel:'3123456789', password:hash, rol:'vendedor', zona:'Norte' });
-  insertUser.run({ nombre:'Andrés Ríos',         cedula:'1000000004', email:'andres@liberal.co',   tel:'3134567890', password:hash, rol:'vendedor', zona:'Centro' });
+  
   insertUser.run({ nombre:'Ana Vélez (Visor)',   cedula:'1000000005', email:'ana@liberal.co',      tel:'3145678901', password:hash, rol:'visor',    zona:null });
 
   // Venteros de muestra
   const ZONAS   = ['Centro','Sur','Norte','Occidente','Oriente','Laureles','Envigado'];
   const TIPOS   = ['Ambulante','Puesto fijo','Tienda de barrio','Quiosco'];
   const NOMBRES = ['Pedro García','María López','Jhon Rincón','Carmen Díaz','Luis Vargas',
-                   'Rosa Martínez','Jorge Restrepo','Claudia Gómez','Álvaro Torres','Sandra Ríos',
+                   'Rosa Martínez','Jorge Restrepo','Álvaro Torres','Sandra Ríos',
                    'Edwin Zapata','Patricia Bedoya','Rodrigo Cano','Luisa Herrera','Mauricio Páez'];
 
   const insertV = db.prepare(`
