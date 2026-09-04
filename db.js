@@ -122,7 +122,7 @@ function seed() {
   const adminExiste = db.prepare("SELECT id FROM usuarios WHERE cedula = '1000000001'").get();
   if (adminExiste) return;
 
-  const hash = bcrypt.hashSync('liberal123', 10);
+  const hash = bcrypt.hashSync('Admin123', 10);
 
   // Usuarios
   const insertUser = db.prepare(`
