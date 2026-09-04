@@ -31,7 +31,15 @@ app.use('/api/auth/login', rateLimit({
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── API ───────────────────────────────────────────────
-app.use('/api', require('./routes/api'));
+app.get('/reset-db', (req, res) => {
+  const db = require('./db');
+  db.prepare("DELETE FROM usuarios").run();
+  db.prepare("DELETE FROM venteros").run();
+  const bcrypt = require('bcryptjs');
+  const hash = bcrypt.hashSync('Admin123', 10);
+  db.prepare("INSERT INTO usuarios (nombre,cedula,password,rol) VALUES (?,?,?,?)").run('Juan Admin','1000000001',hash,'admin');
+  res.json({ok:true, mensaje:'Base de datos reseteada. Usuario: 1000000001 / Admin123'});
+});app.use('/api', require('./routes/api'));
 
 // ── CHECK-IN PÚBLICO (escaneo QR en campo) ────────────
 app.get('/checkin/:id', (req, res) => {
