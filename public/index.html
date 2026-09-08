@@ -411,6 +411,18 @@ tr:hover td{background:rgba(255,255,255,.02);color:var(--blanco)}
       <div class="fg fg-full"><label>Observaciones</label><textarea id="mn-obs" placeholder="Notas adicionales..."></textarea></div>
     </div>
     <button class="btn btn-g" style="width:100%;margin-bottom:8px;padding:8px" onclick="capturarGPS()">📍 Capturar coordenadas GPS</button>
+  <div style="background:rgba(200,16,46,.08);border:1px solid rgba(200,16,46,.2);border-radius:8px;padding:12px;margin:10px 0"><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer"><input type="checkbox" id="mn-autoriza" style="width:16px;height:16px;margin-top:2px;accent-color:var(--rojo)"><span style="font-size:11px;color:var(--g6);line-height:1.6">Autorizo a <strong style="color:var(--blanco)">LIBERAL</strong> para recopilar y usar mis datos personales (nombre, cédula, teléfono, ubicación GPS) con fines comerciales y de fidelización, según la <strong style="color:var(--oro)">Ley 1581 de 2012</strong>. Puedo solicitar modificación o eliminación de mis datos en cualquier momento.</span></label></div>
+    <!-- AUTORIZACIÓN DATOS -->
+<div style="background:rgba(200,16,46,.08);border:1px solid rgba(200,16,46,.2);border-radius:8px;padding:12px;margin:10px 0">
+  <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+    <input type="checkbox" id="mn-autoriza" style="width:16px;height:16px;margin-top:2px;accent-color:var(--rojo)">
+    <span style="font-size:11px;color:var(--g6);line-height:1.6">
+      Autorizo a <strong style="color:var(--blanco)">LIBERAL</strong> para recopilar y usar mis datos personales (nombre, cédula, teléfono, ubicación GPS) con fines comerciales y de fidelización, según la 
+      <strong style="color:var(--oro)">Ley 1581 de 2012</strong>. 
+      Puedo solicitar modificación o eliminación de mis datos en cualquier momento.
+    </span>
+  </label>
+</div>
     <div class="info-box" style="margin-top:0;margin-bottom:14px">
       <strong>Automático al guardar:</strong> Se genera QR único de check-in y se envía mensaje de bienvenida por WhatsApp.
     </div>
@@ -675,6 +687,8 @@ async function crearVentero() {
   const cedula = document.getElementById('mn-ced').value.trim();
   const tel    = document.getElementById('mn-tel').value.trim();
   const zona   = document.getElementById('mn-zona').value;
+  const autoriza = document.getElementById('mn-autoriza').checked;
+if (!autoriza) { toast('⚠ El ventero debe autorizar el tratamiento de datos'); return; }
   if (!nombre || !cedula || !tel || !zona) { toast('⚠ Nombre, cédula, teléfono y zona son requeridos'); return; }
 
   try {
